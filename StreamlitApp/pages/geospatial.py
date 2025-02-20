@@ -6,11 +6,18 @@ import random
 st.set_page_config(page_title="Golf Shot Predictions", page_icon="⛳")
 
 st.markdown("# Golf Shot Predictions")
+option = st.selectbox(
+    "Select a Golf Course:",
+    (["Clifton Park", "Elkridge", "Pine Ridge"]),
+    index=0,
+    placeholder="Select a feature...",
+)
+course_coords = {"Clifton Park": (39.3202193906142, -76.57967450138088), "Elkridge": (39.372440602200875, -76.63036689675737), "Pine Ridge": (39.444025295839374, -76.58027871650481)}
 
 def generate_golf_data():
     shots = []
     shot_types = ["Drive", "Iron Shot", "Approach", "Chip", "Putt"]
-    lat_start, lon_start = 39.3202193906142, -76.57967450138088
+    lat_start, lon_start = course_coords[option]
     
     for i in range(10):
         lat_end = lat_start + random.uniform(-0.001, 0.001)
@@ -66,8 +73,8 @@ st.pydeck_chart(
     pdk.Deck(
         map_style="mapbox://styles/mapbox/satellite-streets-v11",
         initial_view_state={
-            "latitude": 39.3203355906016,
-            "longitude": -76.57939555164533, 
+            "latitude": course_coords[option][0],
+            "longitude": course_coords[option][1], 
             "zoom": 15,
             "pitch": 50,
         },

@@ -7,8 +7,9 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error as mse
+import scipy
 
-df = pd.read_csv('../GGXY.csv')
+df = pd.read_csv('GGXY.csv')
 df.replace('-', np.nan, inplace=True)
 df.dropna(inplace=True)
 
@@ -38,39 +39,6 @@ ax.invert_yaxis()
 st.pyplot(fig)
 
 # SVR Analysis
-r2scores = []
-for i in range(len(X.columns)):
-    X_feature = X[X.columns[i]].to_numpy().reshape(-1, 1)
-    X_train, X_test, y_train, y_test = train_test_split(X_feature, y, test_size=0.2, random_state=500)
-    
-    scaler_X = StandardScaler()
-    scaler_y = StandardScaler()
-    
-    X_train_scaled = scaler_X.fit_transform(X_train)
-    X_test_scaled = scaler_X.transform(X_test)
-    
-    y_train_scaled = scaler_y.fit_transform(y_train.values.reshape(-1, 1)).ravel()
-    
-    svr = SVR(kernel='rbf')
-    svr.fit(X_train_scaled, y_train_scaled) 
-    
-    y_pred_scaled = svr.predict(X_test_scaled)
-    y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
-    
-    r2 = r2_score(y_test, y_pred)
-    r2scores.append(r2)
-
-scores = pd.DataFrame({'Feature': X.columns, 'R-squared': r2scores}).sort_values(by='R-squared', ascending=False)
-st.write("### Feature Importance in SVR")
-fig, ax = plt.subplots()
-ax.barh(scores['Feature'], scores['R-squared'], color='palevioletred')
-ax.set_xlabel('Feature Importance')
-ax.set_ylabel('Features')
-ax.set_title('Feature Importance in SVR')
-ax.invert_yaxis()
-st.pyplot(fig)
-
-# SVR Graphs
 st.write("### SVR Graphs")
 option = st.selectbox(
     "Select a feature:",
@@ -107,9 +75,36 @@ X_range_scaled = scaler_X.transform(X_range)
 y_range_pred_scaled = svr.predict(X_range_scaled)
 y_range_pred = scaler_y.inverse_transform(y_range_pred_scaled.reshape(-1, 1)).ravel()
 
+# r2 scores
+r2 = r2_score(y_test,y_pred)
+st.text(f'R-squared for {option}: {r2:.5f}')
+
+# Identify the optimal X range that maximizes Y
+optimal_ranges = []
+max_y = np.max(y_range_pred) 
+threshold = 0.98 * max_y 
+
+optimal_x_values = X_range[y_range_pred >= threshold].flatten()
+
+discrete_ranges = []
+start = optimal_x_values[0]
+
+for j in range(1, len(optimal_x_values)):
+    if optimal_x_values[j] - optimal_x_values[j-1] > (X_range[1] - X_range[0]):
+        discrete_ranges.append((start, optimal_x_values[j-1])) 
+        start = optimal_x_values[j] 
+discrete_ranges.append((start, optimal_x_values[-1]))
+discrete_ranges = sorted(discrete_ranges, key=lambda r: np.mean(y_range_pred[(X_range.flatten() >= r[0]) & (X_range.flatten() <= r[1])]), reverse=True)[:2]
+
+optimal_ranges.append((option, discrete_ranges))
+
+st.text(f"Optimal X ranges for maximizing Y on {option} (limited to 2): {discrete_ranges}")
+    
+
 fig, ax = plt.subplots()
 ax.scatter(X_feature, y, color='darkslateblue', alpha=0.5, label='Actual Data')
 ax.plot(X_range, y_range_pred, color='palevioletred', lw=2, label='SVR Regression Curve')
+ax.axvspan(discrete_ranges[0][0], discrete_ranges[0][1], alpha=0.3, color='red')   
 ax.set_xlabel(option)
 ax.set_ylabel('Carry (Yds)')
 ax.set_title(f'SVR on {option}')
@@ -127,12 +122,14 @@ def create_heatmap(x, y, z, xlabel, ylabel, title):
 
     valid_data = pd.DataFrame({'x': x, 'y': y, 'z': z}).dropna()
     
-    heatmap_data, xedges, yedges = np.histogram2d(valid_data['x'], valid_data['y'], bins=50, weights=valid_data['z'])
-    counts, _, _ = np.histogram2d(valid_data['x'], valid_data['y'], bins=50)
+    heatmap_data, xedges, yedges = np.histogram2d(valid_data['x'], valid_data['y'], bins=100, weights=valid_data['z'])
+    counts, _, _ = np.histogram2d(valid_data['x'], valid_data['y'], bins=100)
     heatmap_avg = np.divide(heatmap_data, counts, out=np.zeros_like(heatmap_data), where=counts != 0)
     
+    heatmap_smooth = scipy.ndimage.gaussian_filter(heatmap_avg, sigma=2.5)
+
     fig, ax = plt.subplots()
-    c = ax.imshow(heatmap_avg.T, origin='lower', aspect='auto', extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], cmap='BuPu')
+    c = ax.imshow(heatmap_smooth.T, origin='lower', aspect='auto', extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], cmap='viridis', interpolation="bilinear")
     fig.colorbar(c, label='Carry (yards)')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
