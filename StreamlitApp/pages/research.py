@@ -82,7 +82,7 @@ st.text(f'R-squared for {option}: {r2:.5f}')
 # Identify the optimal X range that maximizes Y
 optimal_ranges = []
 max_y = np.max(y_range_pred) 
-threshold = 0.98 * max_y 
+threshold = 0.98 * max_y  # threshold for "near max" regions
 
 optimal_x_values = X_range[y_range_pred >= threshold].flatten()
 
@@ -90,21 +90,36 @@ discrete_ranges = []
 start = optimal_x_values[0]
 
 for j in range(1, len(optimal_x_values)):
-    if optimal_x_values[j] - optimal_x_values[j-1] > (X_range[1] - X_range[0]):
-        discrete_ranges.append((start, optimal_x_values[j-1])) 
+    if optimal_x_values[j] - optimal_x_values[j - 1] > (X_range[1] - X_range[0]):
+        discrete_ranges.append((start, optimal_x_values[j - 1]))
         start = optimal_x_values[j] 
-discrete_ranges.append((start, optimal_x_values[-1]))
-discrete_ranges = sorted(discrete_ranges, key=lambda r: np.mean(y_range_pred[(X_range.flatten() >= r[0]) & (X_range.flatten() <= r[1])]), reverse=True)[:2]
+discrete_ranges.append((start, optimal_x_values[-1])) 
 
-optimal_ranges.append((option, discrete_ranges))
+# Limit to at most 2 optimal ranges based on predicted Y value
+discrete_ranges = sorted(
+    discrete_ranges, key=lambda r: np.mean(y_range_pred[(X_range.flatten() >= r[0]) & (X_range.flatten() <= r[1])]), reverse=True
+)[:2]
 
-st.text(f"Optimal X ranges for maximizing Y on {option} (limited to 2): {discrete_ranges}")
-    
+fixed_width = 0.1 * (X_feature.max() - X_feature.min()) 
+
+adjusted_ranges = []
+for r in discrete_ranges:
+    mid_point = (r[0] + r[1]) / 2 
+    new_start = max(X_feature.min(), mid_point - fixed_width / 2)
+    new_end = min(X_feature.max(), mid_point + fixed_width / 2)
+    adjusted_ranges.append((float(new_start), float(new_end)))
+
+optimal_ranges.append((option, adjusted_ranges))
+
+st.text(f"Optimal X ranges for maximizing Y on {option}: {adjusted_ranges}")
 
 fig, ax = plt.subplots()
 ax.scatter(X_feature, y, color='darkslateblue', alpha=0.5, label='Actual Data')
 ax.plot(X_range, y_range_pred, color='palevioletred', lw=2, label='SVR Regression Curve')
 ax.axvspan(discrete_ranges[0][0], discrete_ranges[0][1], alpha=0.3, color='red')   
+for r in adjusted_ranges:
+    ax.axvspan(r[0], r[1], alpha=0.3, color='red')
+    
 ax.set_xlabel(option)
 ax.set_ylabel('Carry (Yds)')
 ax.set_title(f'SVR on {option}')
