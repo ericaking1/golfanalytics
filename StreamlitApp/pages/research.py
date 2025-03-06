@@ -37,6 +37,7 @@ ax.set_ylabel('Features')
 ax.set_title('Feature Importance in Random Forest Regression')
 ax.invert_yaxis()
 st.pyplot(fig)
+st.text('With 9 features on hand, we want to know which ones have the most impact on carry. This is why we need to use random forest to find the order of importance for all the features. This technique considers the total weight of each feature (AKA how much impact it has by itself and in conjunction with other features).')
 
 # SVR Analysis
 st.write("### SVR Graphs")
@@ -126,7 +127,7 @@ ax.set_title(f'SVR on {option}')
 ax.legend()
 ax.grid(True)
 st.pyplot(fig)
-
+st.text('On the graph, we can see the regression line that tries to find the relationship between the feature and carry as a modelable function. The region shaded in red shows the optimla range of values for the feature to maximize feature. The optimal range corresponds with the range of values that the festure can take on in order to reflect what is realistic and feasible.')
 
 # Heatmaps
 st.write("### Heatmaps")
@@ -150,7 +151,7 @@ def create_heatmap(x, y, z, xlabel, ylabel, title):
     ax.set_ylabel(ylabel)
     ax.set_title(title)
     st.pyplot(fig)
-
+    st.text('The heatmaps aim to show pairwise interaction between features. This is helpful for showing the tradeoffs or synergy between features - especially useful for directional features where takeoff and curvature in the shot are both important.')
 
 options = st.multiselect(
     "Features for Heatmap",
