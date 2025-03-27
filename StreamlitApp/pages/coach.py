@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from langchain_openai.chat_models import ChatOpenAI
 
+st.set_page_config(page_title = "Virtual Golf Coach")
+
 st.title("Virtual Golf Coach")
 
 openai_api_key = st.text_input("OpenAI API Key", type="password")

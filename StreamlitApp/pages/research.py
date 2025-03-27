@@ -142,7 +142,19 @@ def create_heatmap(x, y, z, xlabel, ylabel, title):
     counts, _, _ = np.histogram2d(valid_data['x'], valid_data['y'], bins=100)
     heatmap_avg = np.divide(heatmap_data, counts, out=np.zeros_like(heatmap_data), where=counts != 0)
     
-    heatmap_smooth = scipy.ndimage.gaussian_filter(heatmap_avg, sigma=2.5)
+    x_centers = (xedges[:-1] + xedges[1:]) / 2
+    y_centers = (yedges[:-1] + yedges[1:]) / 2
+    X, Y = np.meshgrid(x_centers, y_centers, indexing='ij')
+
+    mask = counts == 0
+    known_x, known_y = X[~mask], Y[~mask]
+    known_z = heatmap_avg[~mask]
+
+    interp_func = scipy.interpolate.griddata(
+        (known_x, known_y), known_z, (X, Y), method='linear', fill_value=0
+    )
+    
+    heatmap_smooth = scipy.ndimage.gaussian_filter(interp_func, sigma=2.5)
 
     fig, ax = plt.subplots()
     c = ax.imshow(heatmap_smooth.T, origin='lower', aspect='auto', extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], cmap='viridis', interpolation="bilinear")
