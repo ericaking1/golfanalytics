@@ -8,6 +8,25 @@ from sklearn.svm import SVR
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error as mse
 import scipy
+from auth import get_user_shots
+import seaborn as sns
+
+# Check if user is logged in
+if 'user_id' not in st.session_state or not st.session_state.user_id:
+    st.warning("Please login to access this page.")
+    st.stop()
+
+# Initialize session state for research data if not exists
+if 'research_data' not in st.session_state:
+    st.session_state.research_data = {
+        'optimal_ranges': {},
+        'feature_importances': None,
+        'r2': None,
+        'r2_rf': None,
+        'rmse_rf': None,
+        'r2_svr': None,
+        'rmse_svr': None
+    }
 
 df = pd.read_csv('GGXY.csv')
 df.replace('-', np.nan, inplace=True)
@@ -22,13 +41,15 @@ rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
 rf_model.fit(X_train, y_train)
 y_pred_rf = rf_model.predict(X_test)
 r2_rf = r2_score(y_test, y_pred_rf)
-rmse_rf = mse(y_test, y_pred_rf)
+rmse_rf = np.sqrt(mse(y_test, y_pred_rf))
 
 st.write("### Random Forest Results")
 st.write(f"R² Score: {r2_rf:.2f}, RMSE: {rmse_rf:.2f}")
 
 # Feature Importance
 feature_importances = pd.DataFrame({'Feature': X.columns, 'Importance': rf_model.feature_importances_}).sort_values(by='Importance', ascending=False)
+st.session_state.research_data['feature_importances'] = feature_importances
+
 st.write("### Feature Importance in Random Forest")
 fig, ax = plt.subplots()
 ax.barh(feature_importances['Feature'], feature_importances['Importance'], color='lightsteelblue')
@@ -69,6 +90,10 @@ svr.fit(X_train_scaled, y_train_scaled)
 # Predictions
 y_pred_scaled = svr.predict(X_test_scaled)
 y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
+
+# Calculate SVR metrics
+r2_svr = r2_score(y_test, y_pred)
+rmse_svr = np.sqrt(mse(y_test, y_pred))
 
 X_feature = X[option].to_numpy().reshape(-1, 1)
 X_range = np.linspace(X_feature.min(), X_feature.max(), 50000).reshape(-1, 1)
@@ -111,6 +136,9 @@ for r in discrete_ranges:
     adjusted_ranges.append((float(new_start), float(new_end)))
 
 optimal_ranges.append((option, adjusted_ranges))
+# Update session state with the new optimal range
+if adjusted_ranges:  # Only update if we found valid ranges
+    st.session_state.research_data['optimal_ranges'][option] = adjusted_ranges[0]
 
 st.text(f"Optimal X ranges for maximizing Y on {option}: {adjusted_ranges}")
 
@@ -173,3 +201,99 @@ options = st.multiselect(
 )
 
 create_heatmap(df[options[0]], df[options[1]], df['Carry'], options[0], options[1], f'Heatmap of {options[0]} and {options[1]}')    
+
+# Optimal Ranges Visualization
+st.write("### Optimal Ranges by Feature Interactions")
+
+# Read and process the optimal ranges data
+optimal_df = pd.read_csv('optimal_ranges_combo.csv')
+optimal_df = optimal_df.set_index("Unnamed: 0")
+labels = optimal_df.columns.tolist()
+optimal_df = optimal_df.loc[labels, labels]
+data = optimal_df.fillna("").values.tolist()
+
+def get_range_width(cell):
+    try:
+        nums = eval(cell)
+        return nums[1] - nums[0]
+    except:
+        return np.nan
+
+value_matrix = np.array([
+    [get_range_width(cell) for cell in row]
+    for row in data
+])
+
+fig, ax = plt.subplots(figsize=(30, 20))
+diag = np.diag(value_matrix)
+diff_from_diag = np.abs(value_matrix - diag[np.newaxis, :])
+percent_diff = np.abs(value_matrix - diag[np.newaxis, :]) / np.abs(diag[np.newaxis, :])
+
+masked_array = np.ma.masked_invalid(percent_diff)
+
+c = ax.imshow(masked_array, cmap='coolwarm')
+
+for i in range(len(labels)):
+    for j in range(len(labels)):
+        if data[i][j] != "":
+            if i == j:
+                try:
+                    nums = eval(data[i][j])
+                    rounded_text = f"({nums[0]:.2f}, {nums[1]:.2f})"
+                except:
+                    rounded_text = data[i][j]
+                ax.text(j, i, rounded_text, ha='center', va='center', color='white', fontsize=15, weight='bold')
+
+                ax.add_patch(plt.Rectangle((i-.5, i-.5), 1, 1, fill=True, color='midnightblue', edgecolor='black'))
+            else:
+                try:
+                    nums = eval(data[i][j])
+                    rounded_text = f"({nums[0]:.2f}, {nums[1]:.2f})"
+                except:
+                    rounded_text = data[i][j]
+                ax.text(j, i, rounded_text, ha='center', va='center', fontsize=15)
+
+ax.set_xticks(np.arange(len(labels)))
+ax.set_yticks(np.arange(len(labels)))
+ax.set_xticklabels(labels, fontsize=30, rotation = 90)
+ax.set_yticklabels(labels, fontsize=30)
+
+cbar = fig.colorbar(c, ax=ax)
+cbar.ax.tick_params(labelsize=20)  
+cbar.set_label("Percentage Difference from Diagonal", fontsize = 20)  
+
+st.pyplot(fig)
+st.markdown("""
+This matrix visualization shows the optimal ranges for different combinations of golf shot features. 
+- The diagonal (dark blue) represents the optimal range for each individual feature
+- The off-diagonal cells show the optimal ranges when considering pairs of features together
+- The color intensity indicates the width of the optimal range (darker = wider range)
+- This helps identify which feature combinations have the most flexibility in their optimal values
+""")
+
+# Correlation Between Column Feature and Row Feature 
+st.write("### Correlation Between Column Feature and Row Feature ")
+
+features = [
+    "Club Speed", "Ball Speed", "Launch Angle", "Spin Rate", "Face Angle",
+    "Face to Path", "Club Path", "Attack Angle", "Launch Direction"
+]
+
+df = pd.DataFrame(value_matrix, index=features, columns=features)
+
+correlation_matrix = df.corr(method='pearson')
+
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+plt.tight_layout()
+st.pyplot(plt)
+
+# At the end, update the final research data
+st.session_state.research_data.update({
+    'feature_importances': feature_importances,
+    'r2': r2,
+    'r2_rf': r2_rf,
+    'rmse_rf': rmse_rf,
+    'r2_svr': r2_svr,
+    'rmse_svr': rmse_svr
+})

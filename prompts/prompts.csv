@@ -1,0 +1,6 @@
+Question,Answer
+How can I improve my irons?,Your data shows that your launch angle for irons average around 10 degrees. It is below the optimal range for the feature. Consider improving upon your downswing for more solid shots!
+How can I improve my driver?,"For drivers, it is generally beneficial to have a positive attack angle, as you want to ""hit up."" Your shots appear to have negative attack angle across all clubs. Consider practicing a flatter downswing for your driver!"
+What is good about my swing?,"From your dataset, it appears that your ball speed and club speed are very high. You are certainly strong and have lots of potential for hitting long shots (extra birdie opportunities!)"
+Can I increase my driving distance?,"To see if you can increase your driving distance, we will see if any down swing features can be adjusted in order to land in the optimal range. From your data, it appears that your face to path should be decreased in order to hit a straighter shot to prevent losing carry from the curvature of the shot. "
+What's causing my slice?,"A slice occurs when a golfer hits the ball with a too open of a club face in relation to the club path. From your data, it appears that your face to path is usually greater than 3 degrees. This likely causes a moderate slice. Consider working on a square club face at impact!"

@@ -1,4 +1,5 @@
 import streamlit as st
+from auth import show_auth_page
 
 # Page Configuration
 st.set_page_config(
@@ -20,6 +21,11 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
+# Check if user is logged in
+if 'user_id' not in st.session_state or not st.session_state.user_id:
+    show_auth_page()
+    st.stop()
 
 # Header and Introduction
 st.header("🏌️‍♂️ Golf Analytics Dashboard")
@@ -54,3 +60,8 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("""
 Ready to enhance your game? Start by logging your shots and asking the **Virtual Coach** a question! 🎯
 """)
+
+# Logout button
+if st.button("Logout"):
+    st.session_state.user_id = None
+    st.rerun()
