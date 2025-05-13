@@ -52,6 +52,48 @@ club_path = st.number_input("Club Path (Deg):", min_value=-10.0, max_value=10.0,
 attack_angle = st.number_input("Attack Angle (Deg):", min_value=-10.0, max_value=10.0, step=0.1)
 launch_direction = st.number_input("Launch Direction (Deg):", min_value=-20.0, max_value=20.0, step=0.1)
 
+# CSV Import Section
+st.markdown("### Import Shots from CSV")
+uploaded_file = st.file_uploader("Upload CSV file with shot data", type=['csv'])
+
+if uploaded_file is not None:
+    try:
+        # Read the CSV file
+        new_shots_df = pd.read_csv(uploaded_file)
+        
+        # Define required columns
+        required_columns = [
+            "Shot Type", "Carry (yards)", "Club Speed (MPH)", "Ball Speed (MPH)",
+            "Launch Angle (Deg)", "Spin Rate (RPM)", "Face Angle (Deg)",
+            "Face to Path (Deg)", "Club Path (Deg)", "Attack Angle (Deg)",
+            "Launch Direction (Deg)"
+        ]
+        
+        # Check if all required columns are present
+        missing_columns = [col for col in required_columns if col not in new_shots_df.columns]
+        if missing_columns:
+            st.error(f"Missing required columns in CSV: {', '.join(missing_columns)}")
+        else:
+            # Validate shot types
+            valid_shot_types = ["Drive", "Iron Shot", "Approach", "Chip", "Putt"]
+            invalid_types = new_shots_df[~new_shots_df["Shot Type"].isin(valid_shot_types)]["Shot Type"].unique()
+            if len(invalid_types) > 0:
+                st.error(f"Invalid shot types found: {', '.join(invalid_types)}")
+            else:
+                # Save each shot to database
+                for _, row in new_shots_df.iterrows():
+                    save_user_shot(st.session_state.user_id, row.to_dict())
+                
+                # Update session state
+                st.session_state["golf_data"] = pd.concat(
+                    [st.session_state["golf_data"], new_shots_df], ignore_index=True
+                )
+                st.success(f"Successfully imported {len(new_shots_df)} shots!")
+                st.rerun()
+                
+    except Exception as e:
+        st.error(f"Error processing CSV file: {str(e)}")
+
 # Add shot to database
 if st.button("Add Shot"):
     new_shot = {
@@ -81,22 +123,43 @@ if st.button("Add Shot"):
 
 st.markdown("### Saved Shots")
 
-# Display shots with delete buttons
+
+# Display shots with multi-select deletion
 if not st.session_state["golf_data"].empty:
     # Create a copy of the DataFrame without the id column for display
     display_df = st.session_state["golf_data"].drop('id', axis=1)
+
+    # Display all shots in a table
+    st.dataframe(display_df, hide_index=True)
     
-    # Add delete buttons for each shot
-    for idx, row in st.session_state["golf_data"].iterrows():
-        col1, col2 = st.columns([0.9, 0.1])
-        with col1:
-            st.dataframe(display_df.iloc[[idx]], hide_index=True)
-        with col2:
-            if st.button("🗑️", key=f"delete_{idx}"):
-                shot_id = row['id']
+    st.markdown("#### Select Shots to Delete")
+
+    # Add checkboxes for each shot
+    selected_indices = []
+    for idx, row in display_df.iterrows():
+        if st.checkbox(f"Select shot {idx + 1}", key=f"select_{idx}"):
+            selected_indices.append(idx)
+    
+    # Show selected shots in a table
+    if selected_indices:
+        st.markdown("### Selected Shots for Deletion")
+        st.dataframe(display_df.iloc[selected_indices], hide_index=True)
+        
+        # Delete button for selected shots
+        if st.button("Delete Selected Shots"):
+            # Get the IDs of selected shots
+            selected_ids = st.session_state["golf_data"].iloc[selected_indices]['id'].tolist()
+            
+            # Delete each selected shot
+            for shot_id in selected_ids:
                 delete_user_shot(shot_id)
-                st.success("Shot deleted!")
-                st.rerun()
+            
+            # Update the display DataFrame
+            st.session_state["golf_data"] = st.session_state["golf_data"].drop(selected_indices)
+            st.success(f"Successfully deleted {len(selected_indices)} shots!")
+            st.rerun()
+    
+    
 else:
     st.info("No shots recorded yet. Add your first shot above!")
 

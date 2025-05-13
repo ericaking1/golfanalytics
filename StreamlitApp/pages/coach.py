@@ -8,7 +8,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error as mse
 import os
+from dotenv import load_dotenv
 from auth import get_user_shots
+
+load_dotenv()  # Load environment variables from .env
 
 # Check if user is logged in
 if 'user_id' not in st.session_state or not st.session_state.user_id:
@@ -20,7 +23,7 @@ st.set_page_config(page_title="Virtual Golf Coach")
 st.title("Virtual Golf Coach")
 
 # ---- API Key Input ----
-deepseek_api_key = st.text_input("DeepSeek API Key", type="password", help="Enter your DeepSeek API key to enable the virtual coach. You can get one at https://platform.deepseek.com/")
+deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
 
 # ---- Load Research Data ----
 def load_research_data():
