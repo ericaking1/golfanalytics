@@ -25,7 +25,6 @@ if 'user_id' not in st.session_state or not st.session_state.user_id:
 # # Hole selection
 # hole_number = st.number_input("Select Hole Number:", min_value=1, max_value=18, step=1)
 
-# Simulation parameters
 num_simulations = 1
 show_hazards = st.checkbox("Show Hazards", value=True)
 
@@ -77,7 +76,6 @@ if not user_shots:
     st.warning("No shot data available. Please log some shots first.")
     st.stop()
 
-# Convert shots to DataFrame
 shots_df = pd.DataFrame(user_shots, columns=[
     'id', 'user_id', 'Shot Type', 'Carry (yards)', 'Club Speed (MPH)',
     'Ball Speed (MPH)', 'Launch Angle (Deg)', 'Spin Rate (RPM)',
@@ -85,7 +83,6 @@ shots_df = pd.DataFrame(user_shots, columns=[
     'Attack Angle (Deg)', 'Launch Direction (Deg)', 'timestamp'
 ])
 
-# Convert numeric columns
 numeric_columns = [
     'Carry (yards)', 'Club Speed (MPH)', 'Ball Speed (MPH)',
     'Launch Angle (Deg)', 'Spin Rate (RPM)', 'Face Angle (Deg)',
@@ -96,33 +93,29 @@ numeric_columns = [
 for col in numeric_columns:
     shots_df[col] = pd.to_numeric(shots_df[col], errors='coerce')
 
-# Prepare data for prediction
 le_shot = LabelEncoder()
 shots_df["shot_type_encoded"] = le_shot.fit_transform(shots_df["Shot Type"])
 
-# Use all numeric columns for training
 X = shots_df[numeric_columns]
 y = shots_df["shot_type_encoded"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Train the model
+# Train model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
 def predict_next_shot(distance, lat, lon, shot_number):
-    # Force shot type based on distance and shot sequence
-    if shot_number == 1:  # First shot must be a drive
+    if shot_number == 1: 
         return "Drive"
-    elif distance > 50:  # Mid-range
+    elif distance > 50: 
         return "Iron Shot" if distance > 100 else "Approach"
-    elif distance > 20:  # Close to green
+    elif distance > 20: 
         return "Chip"
-    else:  # On or near green
+    else: 
         return "Putt"
 
 def calculate_shot_endpoint(start_lat, start_lon, distance, angle):
-    # Convert distance from yards to degrees (approximate)
     distance_deg = distance * 0.00001
     end_lat = start_lat + (distance_deg * np.sin(np.radians(angle)))
     end_lon = start_lon + (distance_deg * np.cos(np.radians(angle)))
@@ -133,34 +126,28 @@ def simulate_round(hole_data):
     current_lat, current_lon = hole_data["tee"]
     green_lat, green_lon = hole_data["green"]
     
-    # Track what shot number we're on
     shot_number = 1
     
     while True:
-        # Calculate distance to hole
         distance = np.sqrt(
             (current_lat - green_lat)**2 + 
             (current_lon - green_lon)**2
-        ) * 111000  # Convert to meters
-        distance_yards = distance * 1.09361  # Convert to yards
+        ) * 111000 
+        distance_yards = distance * 1.09361 
         
-        if distance_yards < 2:  # Hole reached (within 2 yards)
+        if distance_yards < 2: 
             break
             
-        # Get shot type based on distance and shot sequence
         shot_type = predict_next_shot(distance_yards, current_lat, current_lon, shot_number)
         
-        # Get average carry distance for this specific shot type
         shot_type_stats = shots_df[shots_df['Shot Type'] == shot_type]['Carry (yards)'].mean()
         carry_distance = float(shot_type_stats)
         
-        # Adjust carry distance based on shot type
         if shot_type == "Putt":
             carry_distance = min(distance_yards, 20)  # Putts shouldn't go past the hole
         elif shot_type == "Chip":
             carry_distance = min(distance_yards, 50)
         
-        # Calculate shot endpoint
         angle = np.arctan2(green_lat - current_lat, green_lon - current_lon)
         next_lat, next_lon = calculate_shot_endpoint(
             current_lat, current_lon, carry_distance, np.degrees(angle)
@@ -185,13 +172,11 @@ def simulate_round(hole_data):
 # Get hole data (TEMPORARILY hole 1 at clifton)
 hole_data = course_data["Clifton Park"]["holes"][1]
 
-# Generate simulations
 all_simulations = []
 for _ in range(num_simulations):
     simulation = simulate_round(hole_data)
     all_simulations.append(simulation)
 
-# Create layers for visualization
 layers = [
     # Fairway layer
     pdk.Layer(
@@ -224,25 +209,22 @@ layers = [
     )
 ]
 
-# Add hazard layers if enabled
-if show_hazards:
-    for hazard in hole_data["hazards"]:
-        layers.append(
-            pdk.Layer(
-                "PolygonLayer",
-                data=[{
-                    "coordinates": hazard["coordinates"],
-                    "color": [139, 69, 19, 100] if hazard["type"] == "bunker" else [0, 0, 255, 100]
-                }],
-                get_polygon="coordinates",
-                get_fill_color="color",
-                get_line_color=[0, 0, 0],
-                line_width_min_pixels=2,
-            )
-        )
+# if show_hazards:
+#     for hazard in hole_data["hazards"]:
+#         layers.append(
+#             pdk.Layer(
+#                 "PolygonLayer",
+#                 data=[{
+#                     "coordinates": hazard["coordinates"],
+#                     "color": [139, 69, 19, 100] if hazard["type"] == "bunker" else [0, 0, 255, 100]
+#                 }],
+#                 get_polygon="coordinates",
+#                 get_fill_color="color",
+#                 get_line_color=[0, 0, 0],
+#                 line_width_min_pixels=2,
+#             )
+#         )
 
-# Add shot layers for each simulation
-# Define colors for each shot type
 shot_colors = {
     "Drive": [255, 0, 0, 160],      # Red
     "Iron Shot": [255, 165, 0, 160],  # Orange
@@ -252,7 +234,6 @@ shot_colors = {
 }
 
 for i, simulation in enumerate(all_simulations):
-    # Add color column to the simulation dataframe
     simulation['color'] = simulation['shot_type'].map(shot_colors)
     
     layers.extend([
@@ -281,13 +262,13 @@ for i, simulation in enumerate(all_simulations):
             data=simulation,
             get_position=["lon2", "lat2"],
             get_text="shot_type",
-            get_color=[255, 255, 255, 200],  # White text for better visibility
+            get_color=[255, 255, 255, 200],
             get_size=12,
             get_alignment_baseline="'bottom'",
         )
     ])
 
-# Display the map
+# Display map
 st.pydeck_chart(
     pdk.Deck(
         map_style="mapbox://styles/mapbox/satellite-streets-v11",
@@ -301,7 +282,7 @@ st.pydeck_chart(
     )
 )
 
-# Display simulation results
+# Display results
 st.markdown("### Simulation Results")
 for i, simulation in enumerate(all_simulations):
     # st.markdown(f"#### Simulation {i+1}")

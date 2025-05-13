@@ -4,12 +4,10 @@ import sqlite3
 import os
 from pathlib import Path
 
-# Initialize database
 def init_db():
     conn = sqlite3.connect('golf_analytics.db')
     c = conn.cursor()
     
-    # Create users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +17,6 @@ def init_db():
         )
     ''')
     
-    # Create shots table with user_id foreign key
     c.execute('''
         CREATE TABLE IF NOT EXISTS shots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,11 +40,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Hash password
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Register new user
 def register_user(username, password, email):
     conn = sqlite3.connect('golf_analytics.db')
     c = conn.cursor()
@@ -64,7 +59,6 @@ def register_user(username, password, email):
     finally:
         conn.close()
 
-# Verify user login
 def verify_user(username, password):
     conn = sqlite3.connect('golf_analytics.db')
     c = conn.cursor()
@@ -78,10 +72,9 @@ def verify_user(username, password):
     conn.close()
     
     if result and result[1] == hash_password(password):
-        return result[0]  # Return user_id
+        return result[0] 
     return None
 
-# Get user's shots
 def get_user_shots(user_id):
     conn = sqlite3.connect('golf_analytics.db')
     c = conn.cursor()
@@ -96,7 +89,6 @@ def get_user_shots(user_id):
     conn.close()
     return shots
 
-# Save user's shot
 def save_user_shot(user_id, shot_data):
     conn = sqlite3.connect('golf_analytics.db')
     c = conn.cursor()
@@ -138,18 +130,14 @@ def delete_user_shot(shot_id):
     conn.commit()
     conn.close()
 
-# Streamlit UI for authentication
 def show_auth_page():
     st.title("Golf Analytics - Authentication")
     
-    # Initialize session state
     if 'user_id' not in st.session_state:
         st.session_state.user_id = None
     
-    # Initialize database
     init_db()
     
-    # Login/Signup tabs
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
     
     with tab1:
@@ -182,7 +170,6 @@ def show_auth_page():
                 else:
                     st.error("Username or email already exists")
     
-    # Logout button if logged in
     if st.session_state.user_id:
         if st.button("Logout"):
             st.session_state.user_id = None

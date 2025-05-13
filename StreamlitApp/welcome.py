@@ -1,14 +1,12 @@
 import streamlit as st
 from auth import show_auth_page
 
-# Page Configuration
 st.set_page_config(
     page_title="Golf Analytics Dashboard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling
 st.markdown("""
     <style>
         .big-font { font-size:32px !important; font-weight: bold; }
@@ -22,12 +20,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Check if user is logged in
 if 'user_id' not in st.session_state or not st.session_state.user_id:
     show_auth_page()
     st.stop()
 
-# Header and Introduction
 st.header("🏌️‍♂️ Golf Analytics Dashboard")
 st.markdown('<p class="big-font">Welcome to your personalized golf improvement hub! ⛳</p>', unsafe_allow_html=True)
 
@@ -37,7 +33,6 @@ machine learning, and geospatial shot predictions. With insights powered by AI, 
 tailored coaching to refine your swing, optimize ball trajectory, and maximize accuracy. 🎯
 """)
 
-# Golf Analytics Features
 st.markdown("""
 ### 🔍 What You Can Do Here:
 - **🏌️ Virtual Golf Coach** – Get personalized swing analysis and actionable feedback using **NLP-powered AI**.
@@ -46,7 +41,6 @@ st.markdown("""
 - **📈 Performance Trends** – Track your improvement over time with historical shot analytics.
 """)
 
-# Highlight Section
 st.markdown("""
 ### 📢 How It Works:
 1. **Log Your Shots** – Upload or enter your shot data.
@@ -56,12 +50,10 @@ st.markdown("""
 """)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Call to Action
 st.markdown("""
 Ready to enhance your game? Start by logging your shots and asking the **Virtual Coach** a question! 🎯
 """)
 
-# Logout button
 if st.button("Logout"):
     st.session_state.user_id = None
     st.rerun()
