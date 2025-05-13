@@ -20,4 +20,18 @@ Having utilized supervised learning methods including random forest regression a
 For the interactive dashboard, we will build the app using the MERN tech stack. If we encounter any difficulties with building this from scratch, we may potentially use a framework for the dashboard web app. 
 
 ## Data Source 
-All data used in this project was obtained from the Trackman simulators at the Elkridge Golf Galaxy location. These shots are a combination of employee, customer, and Erica’s shots. While not representative of all mastery levels, some shots have been made to be “bad” in order to encompass a wider range of possibilities.  
+All data used in this project was obtained from the Trackman simulators at the Elkridge Golf Galaxy location. These shots are a combination of employee, customer, and Erica’s shots. While not representative of all mastery levels, some shots have been made to be “bad” in order to encompass a wider range of possibilities. 
+
+## Files
+Below is an explanation of each file in alphabetical order:
+clustering.ipynb uses GMM cluster to validate the optimal ranges found and is used in the dashboard to visualize the user's shots.
+CorrMatrix.png is the matrix of Pearson correlation coefficients found using the optimal ranges of each feature as well as their pairwise interaction with all other features.
+GGXY.csv is our data file.
+golfanalytics.ipynb contains the bulk of older research, including Random Forest to find the order of feature importance, SVR on each feature, and heatmaps that show pairwise interaction between two different features.
+Heatmap.png is a sample heatmap.
+optimal_ranges_combo.csv contains all optimal ranges found.
+optimal_visual.ipynb uses optimal_ranges_combo.csv to show the optimal ranges in a matrix form and calculate the Pearsson correlation coefficient matrix.
+predictions.py is used by the dashboard to predict shots.
+prompts folder is used for prompt engineering for the virtual coach.
+RF.png is a visual representation of feature importance found using random forest.
+StreamlitApp folder contains all files that are a part of our dashboard.
